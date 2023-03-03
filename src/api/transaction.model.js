@@ -2,11 +2,6 @@ import mongoose, { Schema, Types } from 'mongoose';
 
 const TransactionSchema = new Schema({
   createdAt: { type: Date, defualt: Date.now },
-  transactionId: {
-    type: Types.ObjectId,
-    required: true,
-    auto: true,
-  },
   userId: { type: String, required: true },
   contractAmount: { type: Number, required: true },
   numOfBtc: { type: Number, required: true },

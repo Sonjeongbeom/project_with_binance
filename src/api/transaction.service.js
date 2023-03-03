@@ -1,4 +1,3 @@
-import monngose from 'mongoose';
 import TransactionModel from './transaction.model.js';
 
 export class TransactionService {
