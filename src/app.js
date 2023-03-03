@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import * as dotenv from 'dotenv';
+import { ErrorHandler } from './lib/error-handler.js';
 
 dotenv.config();
 
@@ -14,8 +15,7 @@ export class App {
     this.#initializeMiddlewares();
     this.#intializeHealthCheck();
     this.#initialzeControllers(controllers);
-    // this.#initializeNotFoundMiddleware();
-    // this.#initializeErrorHandling();
+    this.#initializeErrorHandling();
   }
 
   listen() {
@@ -60,14 +60,7 @@ export class App {
     this.app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   }
 
-  //   #initializeNotFoundMiddleware() {
-  //     this.app.use((req, _res, next) => {
-  //       if (!req.route) next(new NotFoundException());
-  //       next();
-  //     });
-  //   }
-
-  //   #initializeErrorHandling() {
-  //     this.app.use(errorMiddleware);
-  //   }
+  #initializeErrorHandling() {
+    this.app.use(ErrorHandler);
+  }
 }
