@@ -4,13 +4,13 @@ const TransactionSchema = new Schema({
   createdAt: { type: Date, defualt: Date.now },
   transactionIdOfBtc: { type: Number, required: true },
   clientOrderIdOfBtc: { type: String, required: true },
-  numOfBtc: { type: Number, required: true },
-  unitPriceOfBtc: { type: Number, required: true },
+  qtyOfBtc: { type: Number, required: true },
+  avgPriceOfBtc: { type: Number, required: true },
   transactionIdOfEth: { type: Number, required: true },
   clientOrderIdOfEth: { type: String, required: true },
-  unitPriceOfEth: { type: Number, required: true },
-  numOfEth: { type: Number, required: true },
-  contractAmount: { type: Number, required: true },
+  qtyOfEth: { type: Number, required: true },
+  avgPriceOfEth: { type: Number, required: true },
+  executedAmount: { type: Number, required: true },
 });
 
 const TransactionModel = mongoose.model('transaction', TransactionSchema);

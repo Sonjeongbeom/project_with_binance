@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { TransactionService } from './transaction.service.js';
+import { HttpException } from '../lib/http-exception.js';
+import { wrapper } from '../lib/response-handler.js';
 
 export class TransactionController {
   /**
@@ -13,34 +15,29 @@ export class TransactionController {
   }
 
   #initializeRoutes() {
-    this.router.get('/', this.readTransaction.bind(this));
-    this.router.post('/', this.createTransaction.bind(this));
-  }
-
-  async sayHello(req, _res) {
-    return _res.send('say Hello!');
+    this.router.get('/', wrapper(this.readTransaction.bind(this)));
+    this.router.post('/', wrapper(this.createTransaction.bind(this)));
   }
 
   async readTransaction(req, res) {
     const data = await this.transactionService.readTransaction();
-    return res.status(200).json({
-      success: true,
-      message: 'read success',
-      data,
-    });
+    return { data };
   }
 
   async createTransaction(req, res) {
-    const { btcPercent, ethPercent, totalAmount } = req.body;
+    const { btcPercent = 50, ethPercent = 50, totalAmount } = req.body;
+    if (!totalAmount) {
+      throw new HttpException(400, 'You have to write all inputs.');
+    }
+    if (totalAmount < 50) {
+      throw new HttpException(400, 'Amount is not enough. (minimum $50)');
+    }
+
     const data = await this.transactionService.createTransaction(
       btcPercent,
       ethPercent,
       totalAmount,
     );
-    return res.status(201).json({
-      success: true,
-      message: 'create success',
-      data,
-    });
+    return { data };
   }
 }

@@ -21,7 +21,7 @@ export class App {
   listen() {
     this.app.listen(PORT, () => {
       // eslint-disable-next-line no-console
-      console.log(`App listening on ${PORT}`);
+      console.log(`App listening on ${PORT} (mode : ${process.env.NODE_ENV})`);
     });
   }
 
