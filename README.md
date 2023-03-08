@@ -1,1 +1,1 @@
-# propwave_project_with_binance
+# project_with_binance
