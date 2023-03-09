@@ -7,9 +7,8 @@ import { SocketClient } from './lib/socket-client.js';
 const SYMBOL = process.env.SYMBOL || 'BTCUSDT';
 
 const main = async () => {
-  if (process.env.NODE_ENV === 'observe') {
+  if (process.env.NODE_ENV === 'ws') {
     const socketClient = new SocketClient(SYMBOL);
-    await socketClient.initializeRedis();
     socketClient.processWebSocket();
   } else {
     await Database.initializeDatabase();

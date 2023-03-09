@@ -5,46 +5,65 @@ import {
   getAccountInfo,
 } from '../lib/binance-handler.js';
 import { HttpException } from '../lib/http-exception.js';
+import { createClient } from 'redis';
 
 export class TransactionService {
+  constructor() {
+    this.initializeRedis();
+  }
+
+  initializeRedis() {
+    this.redisClient = createClient();
+    this.redisClient.on('connect', () => {
+      console.info('Redis connected');
+    });
+    this.redisClient.on('error', (err) => {
+      console.error(`Redis Client Error: ${err}`);
+    });
+    return this.redisClient.connect();
+  }
+
+  async getValueFromRedis(key) {
+    return this.redisClient.get(key);
+  }
+
   async readTransaction() {
     const result = await TransactionModel.find({});
     return result;
   }
 
-  async createTransaction(btcPercent, ethPercent, totalAmount) {
-    const accountInfo = await getAccountInfo();
-    if (!accountInfo.canTrade) {
-      throw new HttpException(400, 'Trade not available.');
-    }
-    const isTradable = await this.#checkBalance(
-      'USDT',
-      accountInfo.balances,
-      totalAmount,
-    );
-    if (!isTradable) {
-      throw new HttpException(400, 'Insufficient balance.');
-    }
-    const [infoOfBtc, infoOfEth] = await getTickerPrices([
-      'BTCUSDT',
-      'ETHUSDT',
-    ]);
-    const orderOfBtc = await this.#makeOrder(
-      infoOfBtc,
-      btcPercent,
-      totalAmount,
-      'BTC',
-    );
-    const orderOfEth = await this.#makeOrder(
-      infoOfEth,
-      ethPercent,
-      totalAmount,
-      'ETH',
-    );
-
+  // ASK를 확인
+  async createTransaction(percentOfBtc, percentOfEth, totalAmount) {
     if (process.env.NODE_ENV === 'development') {
       throw new HttpException(400, 'Only available in prod mode.');
     }
+
+    let priceOfBtc = await this.getValueFromRedis('BTCUSDT_ASK');
+    let priceOfEth = await this.getValueFromRedis('ETHUSDT_ASK');
+
+    if (!priceOfBtc || !priceOfEth) {
+      console.log('You have to call Binace API, no cached data.');
+      const [infoOfBtc, infoOfEth] = await getTickerPrices([
+        'BTCUSDT',
+        'ETHUSDT',
+      ]);
+      priceOfBtc = infoOfBtc.price;
+      priceOfEth = infoOfEth.price;
+    }
+
+    const orderOfBtc = await this.#makeOrder(
+      priceOfBtc,
+      percentOfBtc,
+      totalAmount,
+      'BTCUSDT',
+    );
+    const orderOfEth = await this.#makeOrder(
+      priceOfEth,
+      percentOfEth,
+      totalAmount,
+      'ETHUSDT',
+    );
+
     const orders = [createOneOrder(orderOfBtc), createOneOrder(orderOfEth)];
     const [resultOfBtc, resultOfEth] = await Promise.all(orders);
     const avgPriceOfBtc = await this.#getAvgPrice(resultOfBtc.fills);
@@ -84,23 +103,21 @@ export class TransactionService {
     return false;
   }
 
-  async #makeOrder(info, percent, totalAmount, ticker) {
+  async #makeOrder(price, percent, totalAmount, ticker) {
     let numOfDecimal = 0;
     switch (ticker) {
-      case 'BTC':
+      case 'BTCUSDT':
         numOfDecimal = 5;
         break;
-      case 'ETH':
+      case 'ETHUSDT':
         numOfDecimal = 4;
         break;
     }
     const order = {
-      symbol: info.symbol,
-      price: Number(info.price),
+      symbol: ticker,
+      price: Number(price),
       quantity: Number(
-        ((totalAmount * percent * 0.01) / Number(info.price)).toFixed(
-          numOfDecimal,
-        ),
+        ((totalAmount * percent * 0.01) / Number(price)).toFixed(numOfDecimal),
       ),
     };
     return order;

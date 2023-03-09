@@ -1,10 +1,19 @@
 import axios from 'axios';
 import { HttpException } from './http-exception.js';
 import crypto from 'crypto';
+import { createClient } from 'redis';
 
 const BASE_URL = process.env.BINANCE_BASE_URL;
 const BINANCE_API_KEY = process.env.BINANCE_API_KEY;
 const BINANCE_SECRET = process.env.BINANCE_SECRET;
+
+export class BinanceHandler {
+  constructor() {
+    this.baseUrl = process.env.BINANCE_BASE_URL;
+    this.apiKey = process.env.BINANCE_API_KEY;
+    this.secret = process.env.BINANCE_SECRET;
+  }
+}
 
 const makeQueryString = (q) =>
   Object.keys(q)

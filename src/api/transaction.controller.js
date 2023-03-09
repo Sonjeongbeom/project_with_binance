@@ -25,18 +25,17 @@ export class TransactionController {
   }
 
   async createTransaction(req, res) {
-    const { btcPercent = 50, ethPercent = 50, totalAmount } = req.body;
-    if (!totalAmount) {
-      throw new HttpException(400, 'You have to write all inputs.');
+    const { percentOfBtc = 50, percentOfEth = 50, totalAmount } = req.body;
+    if (!totalAmount || percentOfBtc + percentOfEth !== 100) {
+      throw new HttpException(400, 'Bad Input');
     }
     if (totalAmount < 30) {
       throw new HttpException(400, 'Amount is not enough. (minimum $30)');
     }
-    // 잔고에 요청금액 * 슬리피지 보다 많은 돈이 있어야함
 
     const data = await this.transactionService.createTransaction(
-      btcPercent,
-      ethPercent,
+      percentOfBtc,
+      percentOfEth,
       totalAmount,
     );
     return { data };
