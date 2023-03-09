@@ -1,5 +1,10 @@
 import TransactionModel from './transaction.model.js';
-import { getTickerPrices, createOneOrder } from '../lib/binance-handler.js';
+import {
+  getTickerPrices,
+  createOneOrder,
+  getAccountInfo,
+} from '../lib/binance-handler.js';
+import { HttpException } from '../lib/http-exception.js';
 
 export class TransactionService {
   async readTransaction() {
@@ -8,6 +13,18 @@ export class TransactionService {
   }
 
   async createTransaction(btcPercent, ethPercent, totalAmount) {
+    const accountInfo = await getAccountInfo();
+    if (!accountInfo.canTrade) {
+      throw new HttpException(400, 'Trade not available.');
+    }
+    const isTradable = await this.#checkBalance(
+      'USDT',
+      accountInfo.balances,
+      totalAmount,
+    );
+    if (!isTradable) {
+      throw new HttpException(400, 'Insufficient balance.');
+    }
     const [infoOfBtc, infoOfEth] = await getTickerPrices([
       'BTCUSDT',
       'ETHUSDT',
@@ -24,6 +41,10 @@ export class TransactionService {
       totalAmount,
       'ETH',
     );
+
+    if (process.env.NODE_ENV === 'development') {
+      throw new HttpException(400, 'Only available in prod mode.');
+    }
     const orders = [createOneOrder(orderOfBtc), createOneOrder(orderOfEth)];
     const [resultOfBtc, resultOfEth] = await Promise.all(orders);
     const avgPriceOfBtc = await this.#getAvgPrice(resultOfBtc.fills);
@@ -48,6 +69,19 @@ export class TransactionService {
     });
 
     return result;
+  }
+
+  async #checkBalance(assetName, balances, totalAmount) {
+    for (let balance of balances) {
+      if (balance.asset == assetName) {
+        if (balance.free > totalAmount) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    }
+    return false;
   }
 
   async #makeOrder(info, percent, totalAmount, ticker) {

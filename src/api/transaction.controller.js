@@ -29,9 +29,10 @@ export class TransactionController {
     if (!totalAmount) {
       throw new HttpException(400, 'You have to write all inputs.');
     }
-    if (totalAmount < 50) {
-      throw new HttpException(400, 'Amount is not enough. (minimum $50)');
+    if (totalAmount < 30) {
+      throw new HttpException(400, 'Amount is not enough. (minimum $30)');
     }
+    // 잔고에 요청금액 * 슬리피지 보다 많은 돈이 있어야함
 
     const data = await this.transactionService.createTransaction(
       btcPercent,

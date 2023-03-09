@@ -23,6 +23,29 @@ export async function getSignature(queryString) {
     .digest('hex');
 }
 
+export async function getAccountInfo() {
+  const params = {
+    timestamp: Date.now(),
+  };
+  const query = makeQueryString(params);
+  const signature = await getSignature(query);
+  const url = `${BASE_URL}/api/v3/account?${query}&signature=${signature}`;
+  const headers = {
+    'X-MBX-APIKEY': BINANCE_API_KEY,
+  };
+  return axios
+    .get(url, { headers })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+      throw new HttpException(
+        error.response.status,
+        `code ${error.response.data.code}: ${error.response.data.msg}`,
+      );
+    });
+}
+
 export async function getTickerPrices(tickers) {
   let query = '[';
   for (let i = 0; i < tickers.length; i++) {
