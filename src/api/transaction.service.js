@@ -1,32 +1,9 @@
 import TransactionModel from './transaction.model.js';
-import {
-  getTickerPrices,
-  createOneOrder,
-  getAccountInfo,
-} from '../lib/binance-handler.js';
 import { HttpException } from '../lib/http-exception.js';
-import { createClient } from 'redis';
+import { RedisClient } from '../lib/redis-client.js';
+import { BinanceHandler } from '../lib/binance-handler.js';
 
 export class TransactionService {
-  constructor() {
-    this.initializeRedis();
-  }
-
-  initializeRedis() {
-    this.redisClient = createClient();
-    this.redisClient.on('connect', () => {
-      console.info('Redis connected');
-    });
-    this.redisClient.on('error', (err) => {
-      console.error(`Redis Client Error: ${err}`);
-    });
-    return this.redisClient.connect();
-  }
-
-  async getValueFromRedis(key) {
-    return this.redisClient.get(key);
-  }
-
   async readTransaction() {
     const result = await TransactionModel.find({});
     return result;
@@ -38,17 +15,15 @@ export class TransactionService {
       throw new HttpException(400, 'Only available in prod mode.');
     }
 
-    let priceOfBtc = await this.getValueFromRedis('BTCUSDT_ASK');
-    let priceOfEth = await this.getValueFromRedis('ETHUSDT_ASK');
+    let priceOfBtc = await RedisClient.getValue('BTCUSDT_ASK');
+    let priceOfEth = await RedisClient.getValue('ETHUSDT_ASK');
 
     if (!priceOfBtc || !priceOfEth) {
       console.log('You have to call Binace API, no cached data.');
-      const [infoOfBtc, infoOfEth] = await getTickerPrices([
+      [priceOfBtc, priceOfEth] = await BinanceHandler.getPrices([
         'BTCUSDT',
         'ETHUSDT',
       ]);
-      priceOfBtc = infoOfBtc.price;
-      priceOfEth = infoOfEth.price;
     }
 
     const orderOfBtc = await this.#makeOrder(
@@ -64,8 +39,11 @@ export class TransactionService {
       'ETHUSDT',
     );
 
-    const orders = [createOneOrder(orderOfBtc), createOneOrder(orderOfEth)];
-    const [resultOfBtc, resultOfEth] = await Promise.all(orders);
+    const results = [
+      BinanceHandler.createOneOrder(orderOfBtc),
+      BinanceHandler.createOneOrder(orderOfEth),
+    ];
+    const [resultOfBtc, resultOfEth] = await Promise.all(results);
     const avgPriceOfBtc = await this.#getAvgPrice(resultOfBtc.fills);
     const avgPriceOfEth = await this.#getAvgPrice(resultOfEth.fills);
     const executedAmountOfBtc = await this.#getExecutedAmount(

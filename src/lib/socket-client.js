@@ -1,23 +1,24 @@
 import WebSocket from 'ws';
-import { createClient } from 'redis';
+import { RedisClient } from './redis-client.js';
+import { BinanceHandler } from './binance-handler.js';
 
 export class SocketClient {
-  constructor(symbol) {
+  constructor() {
     this.baseUrl = process.env.BINANCE_WS_BASE_URL;
-    this.symbol = symbol;
-    this.path = `ws/${symbol.toLowerCase()}@depth`;
-    this.initializeRedis();
   }
 
-  initializeRedis() {
-    this.redisClient = createClient();
-    this.redisClient.on('connect', () => {
-      console.info('[Redis Client Message] Redis connected');
-    });
-    this.redisClient.on('error', (err) => {
-      console.error(`[Redis Client Error] ${err}`);
-    });
-    return this.redisClient.connect();
+  async initializePath() {
+    const symbols = await BinanceHandler.getUsdtSymbols();
+    const path = symbols.reduce((acc, symbol) => {
+      return acc + `/${symbol.toLowerCase()}@depth`;
+    }, '');
+    this.path = `ws${path}`;
+  }
+
+  saveCurrentPrice(symbol, position, orderBook) {
+    if (orderBook.length > 0) {
+      RedisClient.setValue(`${symbol}_${position}`, orderBook[0][0]);
+    }
   }
 
   heartBeat() {
@@ -54,14 +55,10 @@ export class SocketClient {
       console.warn('WebSocket error', err);
     };
 
-    this.webSocket.onmessage = async (event) => {
+    this.webSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      this.redisClient.set(`${this.symbol}_BID`, data['b'][0][0]);
-      this.redisClient.set(`${this.symbol}_ASK`, data['a'][0][0]);
-      // const bid = await this.redisClient.get(`${this.symbol}_BID`);
-      // const ask = await this.redisClient.get(`${this.symbol}_ASK`);
-      // console.info(`[${this.symbol} BID] ${data['b'][0][0]}`);
-      // console.info(`[${this.symbol} ASK] ${data['a'][0][0]}`);
+      this.saveCurrentPrice(data.s, 'BID', data.b);
+      this.saveCurrentPrice(data.s, 'ASK', data.a);
     };
 
     this.heartBeat();
