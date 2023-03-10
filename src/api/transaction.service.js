@@ -1,5 +1,4 @@
 import TransactionModel from './transaction.model.js';
-import { HttpException } from '../lib/http-exception.js';
 import { RedisClient } from '../lib/redis-client.js';
 import { BinanceHandler } from '../lib/binance-handler.js';
 
@@ -9,12 +8,7 @@ export class TransactionService {
     return result;
   }
 
-  // ASK를 확인
   async createTransaction(percentOfBtc, percentOfEth, totalAmount) {
-    if (process.env.NODE_ENV === 'development') {
-      throw new HttpException(400, 'Only available in prod mode.');
-    }
-
     let priceOfBtc = await RedisClient.getValue('BTCUSDT_ASK');
     let priceOfEth = await RedisClient.getValue('ETHUSDT_ASK');
 
@@ -43,6 +37,7 @@ export class TransactionService {
       BinanceHandler.createOneOrder(orderOfBtc),
       BinanceHandler.createOneOrder(orderOfEth),
     ];
+
     const [resultOfBtc, resultOfEth] = await Promise.all(results);
     const avgPriceOfBtc = await this.#getAvgPrice(resultOfBtc.fills);
     const avgPriceOfEth = await this.#getAvgPrice(resultOfEth.fills);
@@ -68,22 +63,9 @@ export class TransactionService {
     return result;
   }
 
-  async #checkBalance(assetName, balances, totalAmount) {
-    for (let balance of balances) {
-      if (balance.asset == assetName) {
-        if (balance.free > totalAmount) {
-          return true;
-        } else {
-          return false;
-        }
-      }
-    }
-    return false;
-  }
-
-  async #makeOrder(price, percent, totalAmount, ticker) {
+  async #makeOrder(price, percent, totalAmount, symbol) {
     let numOfDecimal = 0;
-    switch (ticker) {
+    switch (symbol) {
       case 'BTCUSDT':
         numOfDecimal = 5;
         break;
@@ -92,11 +74,12 @@ export class TransactionService {
         break;
     }
     const order = {
-      symbol: ticker,
-      price: Number(price),
-      quantity: Number(
-        ((totalAmount * percent * 0.01) / Number(price)).toFixed(numOfDecimal),
-      ),
+      symbol,
+      quantity:
+        Math.floor(
+          ((totalAmount * percent * 0.01) / Number(price)) * 10 ** numOfDecimal,
+        ) /
+        10 ** numOfDecimal,
     };
     return order;
   }

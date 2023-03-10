@@ -61,7 +61,7 @@ export class BinanceHandler {
   }
 
   static async createOneOrder(order) {
-    const { symbol, price, quantity } = order;
+    const { symbol, quantity } = order;
     const params = {
       symbol,
       side: 'BUY',

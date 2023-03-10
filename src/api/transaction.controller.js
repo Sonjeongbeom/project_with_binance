@@ -27,10 +27,18 @@ export class TransactionController {
   async createTransaction(req, res) {
     const { percentOfBtc = 50, percentOfEth = 50, totalAmount } = req.body;
     if (!totalAmount || percentOfBtc + percentOfEth !== 100) {
-      throw new HttpException(400, 'Bad Input');
+      throw new HttpException(400, 'Inproper input');
     }
-    if (totalAmount < 30) {
-      throw new HttpException(400, 'Amount is not enough. (minimum $30)');
+
+    if (
+      totalAmount < 30 ||
+      totalAmount * percentOfBtc * 0.01 < 10 ||
+      totalAmount * percentOfEth * 0.01 < 10
+    ) {
+      throw new HttpException(
+        400,
+        'Amount is not enough. ($10 each, $30 total)',
+      );
     }
 
     const data = await this.transactionService.createTransaction(
