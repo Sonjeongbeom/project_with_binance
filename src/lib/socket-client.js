@@ -1,6 +1,7 @@
 import WebSocket from 'ws';
 import { RedisClient } from './redis-client.js';
 import { BinanceHandler } from './binance-handler.js';
+import { exchangableCoins } from './exchangable-coins.js';
 
 export class SocketClient {
   constructor() {
@@ -8,7 +9,9 @@ export class SocketClient {
   }
 
   async initializePath() {
-    const symbols = await BinanceHandler.getUsdtSymbols();
+    // const symbols = await BinanceHandler.getUsdtSymbols();
+    const symbols = exchangableCoins;
+    console.log('symbols.length', symbols.length);
     const path = symbols.reduce((acc, symbol) => {
       return acc + `/${symbol.toLowerCase()}@depth`;
     }, '');
