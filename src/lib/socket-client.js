@@ -17,7 +17,7 @@ export class SocketClient {
 
   saveCurrentPrice(symbol, position, orderBook) {
     if (orderBook.length > 0) {
-      RedisClient.setValue(`${symbol}_${position}`, orderBook[0][0]);
+      return RedisClient.setValue(`${symbol}_${position}`, orderBook[0][0]);
     }
   }
 
